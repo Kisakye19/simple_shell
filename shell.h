@@ -1,7 +1,6 @@
 #ifndef SHELL_H
 #define SHELL_H
 
-unsigned int factorial(unsigned int n);
+void execute_command(char *input);
 
 #endif /* SHELL_H */
-
