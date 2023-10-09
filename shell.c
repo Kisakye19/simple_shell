@@ -33,8 +33,10 @@ char *read_line(void)
 {
     char *line = NULL;
     size_t len = 0;
+    ssize_t nread;
 
-    if (getline(&line, &len, stdin) == -1)
+    nread = getline(&line, &len, stdin);
+    if (nread == -1)
     {
         if (feof(stdin))
         {
@@ -43,9 +45,11 @@ char *read_line(void)
         }
         else
         {
-            perror("read_line");
+            perror("getline");
+	    free(line);
             exit(EXIT_FAILURE);
         }
+	return (line);
     }
 
     return line;
@@ -53,30 +57,30 @@ char *read_line(void)
 
 char **split_line(char *line)
 {
-    int bufsize = 64; /* Initial buffer size */
+    int bufsize = 1024; /* Initial buffer size */
     int position = 0;
     char **tokens = malloc(bufsize * sizeof(char *));
     char *token;
 
     if (!tokens)
     {
-        perror("split_line");
+        fprintf(stderr, "allocation error\n");
         exit(EXIT_FAILURE);
     }
 
     token = strtok(line, " \t\r\n\a");
-    while (token)
+    while (token != NULL)
     {
         tokens[position] = token;
         position++;
 
         if (position >= bufsize)
         {
-            bufsize += 64; /* Increase buffer size */
+            bufsize += 1024; /* Increase buffer size */
             tokens = realloc(tokens, bufsize * sizeof(char *));
-            if (!tokens)
+	    if (!tokens)
             {
-                perror("split_line");
+                fprintf(stderr, "allocation error\n");
                 exit(EXIT_FAILURE);
             }
         }
@@ -99,13 +103,12 @@ int execute(char **args)
         if (execve(args[0], args, NULL) == -1)
         {
             perror("execute");
+	}
             exit(EXIT_FAILURE);
-        }
     }
     else if (pid < 0)
     {
         perror("fork");
-        exit(EXIT_FAILURE);
     }
     else
 	{
