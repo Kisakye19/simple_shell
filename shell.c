@@ -8,9 +8,20 @@
 
 extern char **environ; 
 
-void handle_exit() {
+void handle_exit() 
+{
     printf("Exiting the shell\n");
     exit(0); 
+}
+
+void execute_env() 
+{
+    char **env = environ;
+    while (*env != NULL) 
+    {
+        printf("%s\n", *env);
+        env++;
+    }
 }
 
 int main(void)
@@ -30,6 +41,11 @@ int main(void)
 	    {
                 handle_exit(); /* Call the exit handler*/
             } 
+		else if (strcmp(args[0], "env") == 0) 
+	    {
+                execute_env(); /* Call the env command*/
+            } 
+
 		else 
 	status = execute(args, environ);
 
