@@ -65,7 +65,7 @@ char *read_line(void)
     size_t len = 0;
     ssize_t nread;
 
-    nread = getline(&line, &len, stdin);
+    nread = custom_getline(&line, &len);
     if (nread == -1)
     {
         if (feof(stdin))
