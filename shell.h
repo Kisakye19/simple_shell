@@ -7,7 +7,7 @@
 
 char *read_line(void);
 char **split_line(char *line);
-int execute(char **args);
+int execute(char **args, char **environ);
 
 #endif /* SHELL_H */
 
