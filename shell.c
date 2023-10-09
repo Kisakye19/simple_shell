@@ -8,6 +8,11 @@
 
 extern char **environ; 
 
+void handle_exit() {
+    printf("Exiting the shell\n");
+    exit(0); 
+}
+
 int main(void)
 {
     char *line;
@@ -19,13 +24,20 @@ int main(void)
         printf("($) ");
         line = read_line();
         args = split_line(line);
-        status = execute(args, environ);
-
-        free(line);
-        free(args);
+	if (args[0] != NULL) 
+	{
+            if (strcmp(args[0], "exit") == 0) 
+	    {
+                handle_exit(); /* Call the exit handler*/
+            } 
+		else 
+	status = execute(args, environ);
 
         if (status)
             perror("Error");
+	}
+	free(line);
+        free(args);
     }
 
     return (0);
@@ -98,8 +110,8 @@ int execute(char **args, char **environ)
     pid_t pid;
     int status;
 
-    if (args[0] == NULL)
-        return (0);
+    if (args == NULL || args[0] == NULL)
+        return (1);
 
     pid = fork();
     if (pid == 0)
@@ -165,5 +177,5 @@ int execute(char **args, char **environ)
         wait(&status);
     }	
 
-    return (0);
+    return (1);
 }
