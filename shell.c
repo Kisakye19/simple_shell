@@ -1,41 +1,117 @@
+#include "shell.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <string.h>
-#include "shell.h"
+#include <unistd.h>
 
-void execute_command(char *input)
+int main(void)
 {
-    char *token;
-    int i = 0;
-    char **command;
-    pid_t child_pid;
+    char *line;
+    char **args;
     int status;
 
-    token = strtok(input, " \t\n");
-    command = malloc(sizeof(char *) * 1024);
+    while (1)
+    {
+        printf("($) ");
+        line = read_line();
+        args = split_line(line);
+        status = execute(args);
 
+        free(line);
+        free(args);
+
+        if (status)
+            perror("Error");
+    }
+
+    return (0);
+}
+
+char *read_line(void)
+{
+    char *line = NULL;
+    size_t len = 0;
+
+    if (getline(&line, &len, stdin) == -1)
+    {
+        if (feof(stdin))
+        {
+            free(line);
+            exit(EXIT_SUCCESS); /* Exit on Ctrl+D (EOF) */
+        }
+        else
+        {
+            perror("read_line");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    return line;
+}
+
+char **split_line(char *line)
+{
+    int bufsize = 64; /* Initial buffer size */
+    int position = 0;
+    char **tokens = malloc(bufsize * sizeof(char *));
+    char *token;
+
+    if (!tokens)
+    {
+        perror("split_line");
+        exit(EXIT_FAILURE);
+    }
+
+    token = strtok(line, " \t\r\n\a");
     while (token)
     {
-        command[i] = token;
-        token = strtok(NULL, " \t\n");
-        i++;
+        tokens[position] = token;
+        position++;
+
+        if (position >= bufsize)
+        {
+            bufsize += 64; /* Increase buffer size */
+            tokens = realloc(tokens, bufsize * sizeof(char *));
+            if (!tokens)
+            {
+                perror("split_line");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        token = strtok(NULL, " \t\r\n\a");
     }
+    tokens[position] = NULL; /* Null-terminate the argument list */
+    return tokens;
+}
 
-    command[i] = NULL;
-    child_pid = fork();
+int execute(char **args)
+{
+    pid_t pid;
+    int status;
 
-    if (child_pid == 0)
+    pid = fork();
+    if (pid == 0)
     {
-        if (execve(command[0], command, NULL) == -1)
-            perror("Error:");
+        /* Child process */
+        if (execve(args[0], args, NULL) == -1)
+        {
+            perror("execute");
+            exit(EXIT_FAILURE);
+        }
+    }
+    else if (pid < 0)
+    {
+        perror("fork");
+        exit(EXIT_FAILURE);
     }
     else
-    {
+	{
+ /* Parent process */
         wait(&status);
-    }
+    }	
 
-    free(command);
+    return 0;
 }
