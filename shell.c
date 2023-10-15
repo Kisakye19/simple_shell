@@ -5,13 +5,89 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <errno.h>
+#include <limits.h>
 
 extern char **environ; 
+int is_numeric(const char *str);
 
-void handle_exit() 
+void handle_cd(char **args) {
+    char *new_dir;
+    char *current_dir = getcwd(NULL, 0);
+    char *home = getenv("HOME");
+
+    if (args[1] == NULL || strcmp(args[1], "~") == 0) {
+        new_dir = home;
+    } else if (strcmp(args[1], "-") == 0) {
+        char *previous_dir = getenv("OLDPWD");
+        if (previous_dir == NULL) {
+            fprintf(stderr, "cd: OLDPWD not set\n");
+            return;
+        }
+        new_dir = previous_dir;
+    } else {
+        new_dir = args[1];
+    }
+
+    if (chdir(new_dir) != 0) {
+        perror("cd");
+    } else {
+        /* Update PWD and OLDPWD environment variables*/
+        setenv("PWD", getcwd(NULL, 0), 1);
+        setenv("OLDPWD", current_dir, 1);
+    }
+
+    free(current_dir);
+}
+
+int handle_setenv(char **args) 
+	{
+    if (args[1] == NULL || args[2] == NULL) 
+	{
+        fprintf(stderr, "Usage: setenv VARIABLE VALUE\n");
+        return 1;
+    }
+    
+    if (setenv(args[1], args[2], 1) != 0) 
+	{
+        perror("setenv");
+        return 1;
+    }
+    
+    return 0;
+}
+
+int handle_unsetenv(char **args) 
+	{
+    if (args[1] == NULL) 
+	{
+        fprintf(stderr, "Usage: unsetenv VARIABLE\n");
+        return 1;
+    }
+    
+    if (unsetenv(args[1]) != 0) 
+	{
+        perror("unsetenv");
+        return 1;
+    }
+    
+    return 0;
+}
+
+
+int handle_exit(char **args) 
 {
-    printf("Exiting the shell\n");
-    exit(0); 
+
+    if (args[1] == NULL)
+        return -1; 
+    else if (is_numeric(args[1]))
+        return atoi(args[1]); /*Exit the shell with a specific status code*/
+    else
+    {
+        fprintf(stderr, "Usage: exit [status]\n");
+        return 0;
+    }
+
 }
 
 void execute_env() 
@@ -24,26 +100,56 @@ void execute_env()
     }
 }
 
+int is_numeric(const char *str)
+{
+    while (*str)
+    {
+        if (*str < '0' || *str > '9')
+            return 0;
+        str++;
+    }
+    return 1;
+}
+
 int main(void)
 {
     char *line;
     char **args;
     int status;
+    char cwd[PATH_MAX]; /* To store the current working directory*/
 
     while (1)
     {
-        printf("($) ");
+	getcwd(cwd, sizeof(cwd)); /* Get the current working directory*/
+        printf("($) %s$ ", cwd); /* Display the current directory in the prompt*/
         line = read_line();
         args = split_line(line);
+
 	if (args[0] != NULL) 
 	{
-            if (strcmp(args[0], "exit") == 0) 
+	    if (strcmp(args[0], "cd") == 0) 
 	    {
-                handle_exit(); /* Call the exit handler*/
+                handle_cd(args);
+            }
+		else if (strcmp(args[0], "exit") == 0) 
+	    {
+                 status = handle_exit(args);
+                if (status == -1)
+		break; /* Exit the shell*/
+ 		else
+                    exit(status);
             } 
 		else if (strcmp(args[0], "env") == 0) 
 	    {
                 execute_env(); /* Call the env command*/
+            } 
+		else if (strcmp(args[0], "setenv") == 0) 
+	    {
+                status = handle_setenv(args);
+            } 
+		else if (strcmp(args[0], "unsetenv") == 0) 
+	    {
+                status = handle_unsetenv(args);
             } 
 
 		else 
@@ -85,41 +191,57 @@ char *read_line(void)
     return line;
 }
 
+
 char **split_line(char *line)
 {
     int bufsize = 1024; /* Initial buffer size */
     int position = 0;
-    char **tokens = malloc(bufsize * sizeof(char *));
+    char **tokens = NULL;
     char *token;
 
-    if (!tokens)
+     if (!line)
     {
-        fprintf(stderr, "allocation error\n");
-        exit(EXIT_FAILURE);
+        perror("Error: Unable to read the command line\n");
+        return (NULL);
     }
 
-    token = strtok(line, " \t\r\n\a");
-    while (token != NULL)
+    tokens = malloc(bufsize * sizeof(char *));
+    if (!tokens)
     {
+        perror("Error: Unable to allocate memory for tokens\n");
+        exit(EXIT_FAILURE);
+    }
+    while (*line)
+    {
+        while (*line == ' ' || *line == '\t')
+            line++;
+
+        token = line;
+
+        while (*line && *line != ' ' && *line != '\t')
+            line++;
+
+        if (*line)
+            *line++ = '\0';
+
         tokens[position] = token;
         position++;
-
-        if (position >= bufsize)
+     if (position >= bufsize)
         {
-            bufsize += 1024; /* Increase buffer size */
+            bufsize += 1024;
             tokens = realloc(tokens, bufsize * sizeof(char *));
-	    if (!tokens)
+            if (!tokens)
             {
-                fprintf(stderr, "allocation error\n");
+                perror("Error: Unable to reallocate memory for tokens\n");
                 exit(EXIT_FAILURE);
             }
         }
-
-        token = strtok(NULL, " \t\r\n\a");
     }
-    tokens[position] = NULL; /* Null-terminate the argument list */
+
+    tokens[position] = NULL;
     return tokens;
 }
+
 
 int execute(char **args, char **environ)
 {
@@ -193,5 +315,5 @@ int execute(char **args, char **environ)
         wait(&status);
     }	
 
-    return (1);
+    return (0);
 }
