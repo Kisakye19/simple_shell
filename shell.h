@@ -12,19 +12,22 @@
 #include <time.h>
 #include <stdbool.h>
 
+/*getline*/
+ssize_t custom_getline(char **lineptr, size_t *n);
+
 /* environment variables */
 extern char **environ;
 extern __sighandler_t signal(int __sig, __sighandler_t __handler);
 
 /* handle built ins */
-int checker(char **cmd, char *buf);
-void prompt_user(void);
+int custom_checker(char **arg, char *buf);
+void prompt_use(void);
 void handle_signal(int m);
-char **tokenizer(char *line);
-char *test_path(char **path, char *command);
-char *append_path(char *path, char *command);
-int handle_builtin(char **command, char *line);
-void exit_cmd(char **command, char *line);
+char **tokenize(char *line);
+char *test_path(char **path, char *args);
+char *custom_append_paths(char *path, char *args);
+int handle_built_in(char **args, char *line);
+void exit_arg(char **args, char *line);
 
 void print_env(void);
 
@@ -35,11 +38,11 @@ int _strncmp(char *s1, char *s2, int n);
 char *_strdup(char *s);
 char *_strchr(char *s, char c);
 
-void execution(char *cp, char **cmd);
-char *find_path(void);
+void execution(char *cp, char **arg);
+char *find_paths(void);
 
 /* helper function for efficient free */
-void free_buffers(char **buf);
+void free_buffer(char **buf);
 
 struct builtin
 {

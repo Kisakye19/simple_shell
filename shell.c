@@ -10,38 +10,38 @@
 
 int main(int ac, char **av, char *envp[])
 {
-	char *line = NULL, *pathcommand = NULL, *path = NULL;
+	char *line = NULL, *pathargs = NULL, *path = NULL;
 	size_t bufsize = 0;
 	ssize_t linesize = 0;
-	char **command = NULL, **paths = NULL;
+	char **args = NULL, **paths = NULL;
 	(void)envp, (void)av;
 	if (ac < 1)
 		return (-1);
 	signal(SIGINT, handle_signal);
 	while (1)
 	{
-		free_buffers(command);
-		free_buffers(paths);
-		free(pathcommand);
-		prompt_user();
-		linesize = getline(&line, &bufsize, stdin);
+		free_buffer(args);
+		free_buffer(paths);
+		free(pathargs);
+		prompt_use();
+		linesize = custom_getline(&line, &bufsize);
 		if (linesize < 0)
 			break;
 		info.ln_count++;
 		if (line[linesize - 1] == '\n')
 			line[linesize - 1] = '\0';
-		command = tokenizer(line);
-		if (command == NULL || *command == NULL || **command == '\0')
+		args = tokenize(line);
+		if (args == NULL || *args == NULL || **args == '\0')
 			continue;
-		if (checker(command, line))
+		if (custom_checker(args, line))
 			continue;
-		path = find_path();
-		paths = tokenizer(path);
-		pathcommand = test_path(paths, command[0]);
-		if (!pathcommand)
+		path = find_paths();
+		paths = tokenize(path);
+		pathargs = test_path(paths, args[0]);
+		if (!pathargs)
 			perror(av[0]);
 		else
-			execution(pathcommand, command);
+			execution(pathargs, args);
 	}
 	if (linesize < 0 && flags.interactive)
 		write(STDERR_FILENO, "\n", 1);

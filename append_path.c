@@ -8,18 +8,18 @@
 * Return: buffer containing command with path on success
 * NULL on failure
 */
-char *append_path(char *path, char *command)
+char *custom_append_paths(char *path, char *args)
 {
 	char *buf;
 	size_t i = 0, j = 0;
 
-	if (command == 0)
-		command = "";
+	if (args == 0)
+		args = "";
 
 	if (path == 0)
 		path = "";
 
-	buf = malloc(sizeof(char) * (_strlen(path) + _strlen(command) + 2));
+	buf = malloc(sizeof(char) * (_strlen(path) + _strlen(args) + 2));
 	if (!buf)
 		return (NULL);
 
@@ -34,9 +34,9 @@ char *append_path(char *path, char *command)
 		buf[i] = '/';
 		i++;
 	}
-	while (command[j])
+	while (args[j])
 	{
-		buf[i + j] = command[j];
+		buf[i + j] = args[j];
 		j++;
 	}
 	buf[i + j] = '\0';
